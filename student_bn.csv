@@ -1,0 +1,56 @@
+
+#Prior probability of A,,
+A,,
+0.11,,
+,,
+#Prior probability of B,,
+B,,
+0.12,,
+,,
+#Prior probability of C,,
+C,,
+0.13,,
+,,
+"#Probability of D, given A B C",,,
+A,B,C,D
+T,T,T,0.14
+T,T,F,0.15
+T,F,T,0.16
+T,F,F,0.17
+F,T,T,0.18
+F,T,F,0.19
+F,F,T,0.20
+F,F,F,0.21
+,,,
+"#Probability of E, given A B",,
+A,B,E
+T,T,0.22
+T,F,0.can
+F,T,0.24
+F,F,0.25
+,,
+"#Probability of F, given B C D",,,
+B,C,D,F
+T,T,T,0.26
+T,T,F,0.27
+T,F,T,0.28
+T,F,F,0.29
+F,T,T,0.30
+F,T,F,0.31
+F,F,T,0.32
+F,F,F,0.33
+,,,
+"#Probability of G, given C D",,
+C,D,G
+T,T,0.34
+T,F,0.35
+F,T,0.36
+F,F,0.37
+,,
+"#Probability of H, given D E",,
+D,E,H
+T,T,0.38
+T,F,0.39
+F,T,0.40
+F,F,0.41
+,,

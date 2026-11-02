@@ -1,0 +1,10 @@
+# test files
+/test/
+
+# python
+__pycache__/
+*.pyc
+.venv/
+
+# macos
+.DS_Store
