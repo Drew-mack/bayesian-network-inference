@@ -2,247 +2,108 @@ import argparse
 import csv
 from itertools import chain, permutations
 import math
-#import matplotlib.pyplot as plt
-#import numpy as np
 from random import random
 import sys
 
 DEBUG_OUTPUT=0
 
 ##############################################################################
-## Student code
+## Exact inference
+
 def calc_global_joint_prob(model, variableValues):
-  """
-  Calculate the global joint probability of a model for a specific set of values
-  
-  model: model object, see read_model_file() for specification
-  variableValues: dictionary of boolean values, keys are variable names
-  """
-  
+  """Return the joint probability of a complete Boolean assignment."""
   joint_prob = 1.0
-
-  # multiply the probability of each variable
   for var in model.vars:
-      prob = read_cpt(model, var, variableValues)
-
-      # account for false variable assignments
-      if not variableValues[var]:
-          prob = 1 - prob
-
-      joint_prob *= prob
-
+    prob = read_cpt(model, var, variableValues)
+    joint_prob *= prob if variableValues[var] else 1 - prob
   return joint_prob
 
 
 def calc_query_exact_brute(model, queryVar, queryVal, evidence):
-  """
-  Calculate posterior probability for a given variable
+  """Compute P(queryVar=queryVal | evidence) by enumerating assignments."""
+  query_and_evidence = 0.0
+  evidence_prob = 0.0
+  for assignment in truefalse_combination_iterator(model.vars):
+    if all(assignment[var] == value for var, value in evidence.items()):
+      prob = calc_global_joint_prob(model, assignment)
+      evidence_prob += prob
+      if assignment[queryVar] == queryVal:
+        query_and_evidence += prob
+  return query_and_evidence / evidence_prob
 
-  model: model object, see read_model_file() for specification
-  queryVar: string, query variable name
-  queryVal: boolean, value of the query variable we are calculating the probabilty for
-  evidence: dictionary of boolean values, where keys are evidence variable names
-            (Any variable not listed as query or evidence is assumed to be hidden)
-  """
-
-  # This first attempt at probabilistic inference will use the brute-force (table)
-  #   enumeration approach shown in the Probability Intro slides (see slide 24)
-  #
-  # This requires the calculation of two joint probabilities based on the definition
-  # of conditional probability:
-  #                          Pr( Query & Evidence )
-  #   Pr(Query | Evidence) = ----------------------
-  #                              Pr( Evidence )
-  #
-  # Both of these joint probabilities can be calculated by going over every entry in
-  # the global joint probability table and summing up the probabilities of those
-  # entries that match what we're looking for
-  
-  #This is a helper function that should prove useful to you below
-  def dict_issubset(d,sub):
-    """
-    Returns True if every key,value pair in sub has a matching key and value in d
-    Keys in d that _are not_ in sub are ignored.
-    Note: sub should not contain any entries with value None
-    """
-    return all(d.get(key,None)==val for key,val in sub.items())
-     
-  pr_QE=0 #Accumulate probabilities for Query and Evidence
-  pr_E=0  #Accumulate probabilities for just Evidence
-  #Generate table by looping over every possible combination of variables
-  for jptEntry in truefalse_combination_iterator(model.vars):
-    #Get joint probability for this combination of variables
-    pr_entry=calc_global_joint_prob(model,jptEntry)
-
-    
-    # sum probabilities matching the evidence
-    if dict_issubset(jptEntry, evidence):
-        pr_E += pr_entry
-
-        # also check whether the query matches
-        if jptEntry[queryVar] == queryVal:
-            pr_QE += pr_entry
-
-
-  #Definition of coditional probability
-  return pr_QE/pr_E
 
 def calc_query_exact_tree(model, queryVar, queryVal, evidence):
-  """
-  Calculate posterior probability for a given variable
+  """Compute a posterior by recursively summing and multiplying factors."""
+  calcOrder = generate_exact_inf_term_seq(model, queryVar, evidence)
+  if DEBUG_OUTPUT > 0:
+    print('Inf formula: ' + ' '.join(
+      ('sum(' + v + ')') if marginalize else
+      'P({0}|{1})'.format(v, ','.join(model.varDist[v].parents))
+      for marginalize, v in calcOrder
+    ))
 
-  model: model object, see read_model_file() for specification
-  queryVar: string, query variable name
-  queryVal: boolean, value of the query variable we are calculating the probabilty for
-  evidence: dictionary of boolean values, where keys are evidence variable names
-            (Any variable not listed as query or evidence is assumed to be hidden)
-  """
-  
-  # First step, we need to figure out what order we will calculate terms in and where
-  # marginalization needs to happen.
-  #
-  # That said, though this is a part of the inference process that you need to know, it's a
-  # bit tricky to get working in general, especially the optimization bits.
-  #
-  # So I have provided an implementation for this below. If you're curious, feel free to have a look.
-  calcOrder=generate_exact_inf_term_seq(model,queryVar,evidence)
-  # This will return a list of (boolean,string) tuples that indicates which parts need to be calculated in which order.
-  # True indicates a summation (i.e. marginalization) term, False indicates a probability term.
-  # For example, the formula on slide 20 would be represented as:
-  # [ (True,'A'), (True,'E'), (False,'J'), (False,'M'), (False,'A'), (False,'B'), (False,'E') ]
-  # The formula on slide 21 would be:
-  # [ (False,'B'), (True,'A'), (False,'J'), (False,'M'), (True,'E'), (False,'A'), (False,'E') ]
-  # Some marginalization terms for hidden variables, and probability terms for any variables, may be missing
-  # if my code determines they can be optimized away (e.g., handled by normalization instead).
-  
-  # Debug: Output a nicer version of the calculation order (inference formula)
-  if DEBUG_OUTPUT>0: print('Inf formula: '+' '.join( ( ('sum('+v+')') if m else 'P({0}|{1})'.format(v,','.join(model.varDist[v].parents)) ) for m,v in calcOrder))
-  
-  #Make a dictionary with entries for every possible variable, and their values where available (None otherwise)
-  variableValues={v:evidence.get(v,None) for v in model.vars}
-  
-  # Next step, implement the calculation
-  #
-  # I strongly recommend using a recursive solution, in which case leave the below line of code
-  # and move on to implement the recurse_calc_query_exact_tree() function
-  prQ_T,prQ_F=recurse_calc_query_exact_tree(model,queryVar,evidence,variableValues,calcOrder)
-  # HOWEVER, you are not required to implement recursively, in which case delete the above line
-  # and associated function and add your own calculation code here
-  
-  # normalize the query probabilities
-  total = prQ_T + prQ_F
-
-  if queryVal:
-    return prQ_T / total
-  else:
-    return prQ_F / total
+  variableValues = {v: evidence.get(v) for v in model.vars}
+  pr_true, pr_false = recurse_calc_query_exact_tree(
+    model, queryVar, evidence, variableValues, calcOrder
+  )
+  total = pr_true + pr_false
+  return (pr_true if queryVal else pr_false) / total
 
 
 def recurse_calc_query_exact_tree(model, queryVar, evidence, variableValues, remainingCalc):
-  """
-  Recursiving process the summation tree 
-  
-  model,queryVar,evidence: See calc_query_exact_tree()
-  variableValues: dictionary of boolean values or None, values for entire set of variables or None if no value set yet
-    Note: You MAY change this structure during the recursion, but make sure undo those changes when you're done with them
-  remainingCalc: list of (boolean,string), see XXX and comments in calc_query_exact_tree() for format
-  """
-  if DEBUG_OUTPUT>0: indent='    '*(len(evidence)-sum(m for m,v in remainingCalc)) #Indent based on how deep in the recursion we are
+  """Evaluate the remaining factors for both values of the query variable.
 
-  # Your overall task in the function is to assign values to:
-  #   prQ_T
-  #   prQ_F
-  # Which should (eventually) contain the (relative) probabilities for the remainder of the calculation
-  # covering both cases prQ_T (where Query=True) and prQ_F (where Query=False).
-  #
-  # WARNING: In order to keep the code simpler, we will always use always use both
-  # prQ_T and prQ_F. In some cases that means the same value will be assigned to both.
+  Summation terms branch over a hidden variable; probability terms multiply
+  the corresponding CPT factor into the remainder of the calculation.
+  """
+  if DEBUG_OUTPUT > 0:
+    indent = '    ' * (len(evidence) - sum(m for m, v in remainingCalc))
 
-  marginalize,var=remainingCalc[0] #Grab details for the next term we have to deal with
-  # 'var' above will be very important for you below, this is the current
-  # model variable we are calculating for
-  # (You can ignore 'marginalize', only my code needs to use that one.)
+  marginalize, var = remainingCalc[0]
   if marginalize:
-    #Summation term, need to branch over all possible values and continue calculation
-    if DEBUG_OUTPUT>0: print(indent+'Sum over '+var)
-    
-    # calculate both possible values of the hidden variable
+    if DEBUG_OUTPUT > 0:
+      print(indent + 'Sum over ' + var)
     variableValues[var] = True
     true_T, true_F = recurse_calc_query_exact_tree(
       model, queryVar, evidence, variableValues, remainingCalc[1:]
     )
-
     variableValues[var] = False
     false_T, false_F = recurse_calc_query_exact_tree(
       model, queryVar, evidence, variableValues, remainingCalc[1:]
     )
-
-    # restore the hidden variable
     variableValues[var] = None
+    return true_T + false_T, true_F + false_F
 
-    # sum the probabilities from both branches
-    prQ_T = true_T + false_T
-    prQ_F = true_F + false_F
-
+  if queryVar in model.varDist[var].parents:
+    if DEBUG_OUTPUT > 0:
+      print(indent + 'P({0}|{1}) [QC]'.format(var, ','.join(model.varDist[var].parents)))
+    variableValues[queryVar] = True
+    pr_true = read_cpt(model, var, variableValues)
+    variableValues[queryVar] = False
+    pr_false = read_cpt(model, var, variableValues)
+    variableValues[queryVar] = None
+    if not variableValues[var]:
+      pr_true, pr_false = 1 - pr_true, 1 - pr_false
+  elif var == queryVar:
+    if DEBUG_OUTPUT > 0:
+      print(indent + 'P({0}|{1}) [Q]'.format(var, ','.join(model.varDist[var].parents)))
+    prob = read_cpt(model, var, variableValues)
+    pr_true, pr_false = prob, 1 - prob
   else:
-    #Probability term, calculate conditional probability for this variable and continue calculation
-    prQ_T, prQ_F = 1,1 #Base case if we don't recurse below
-    if queryVar in model.varDist[var].parents:
-      #Query variable is a condition for this term
-      if DEBUG_OUTPUT>0: print(indent+'P({0}|{1}) [QC]'.format(var,','.join(model.varDist[var].parents)))
+    if DEBUG_OUTPUT > 0:
+      print(indent + 'P({0}|{1}) [S]'.format(var, ','.join(model.varDist[var].parents)))
+    prob = read_cpt(model, var, variableValues)
+    prob = prob if variableValues[var] else 1 - prob
+    pr_true = pr_false = prob
 
-      # calculate probability when query is true
-      variableValues[queryVar] = True
-      prQ_T = read_cpt(model, var, variableValues)
+  if len(remainingCalc) > 1:
+    rest_true, rest_false = recurse_calc_query_exact_tree(
+      model, queryVar, evidence, variableValues, remainingCalc[1:]
+    )
+    pr_true *= rest_true
+    pr_false *= rest_false
+  return pr_true, pr_false
 
-      # calculate probability when query is false
-      variableValues[queryVar] = False
-      prQ_F = read_cpt(model, var, variableValues)
-
-      # restore the query variable
-      variableValues[queryVar] = None
-
-      # account for false variable assignments
-      if not variableValues[var]:
-        prQ_T = 1 - prQ_T
-        prQ_F = 1 - prQ_F
-
-    elif var==queryVar:
-      #This term is probability _for_ the Query variable
-      if DEBUG_OUTPUT>0: print(indent+'P({0}|{1}) [Q]'.format(var,','.join(model.varDist[var].parents)))
-
-      # calculate probability for both query values
-      prob = read_cpt(model, var, variableValues)
-
-      prQ_T = prob
-      prQ_F = 1 - prob
-
-    else:
-      #Simple term, no need to worry about query variable
-      if DEBUG_OUTPUT>0: print(indent+'P({0}|{1}) [S]'.format(var,','.join(model.varDist[var].parents)))
-
-      
-      # calculate the probability for this variable
-      prob = read_cpt(model, var, variableValues)
-
-      # account for false assignments
-      if not variableValues[var]:
-        prob = 1 - prob
-
-      prQ_T = prob
-      prQ_F = prob
-
-
-    if len(remainingCalc)>1:
-      #If there are still terms left, then recurse
-      recurse_prQ_T, recurse_prQ_F = recurse_calc_query_exact_tree(model,queryVar,evidence,variableValues,remainingCalc[1:])
-      
-      # multiply current probabilities by remaining factors
-      prQ_T *= recurse_prQ_T
-      prQ_F *= recurse_prQ_F
-
-  return prQ_T, prQ_F #Return (relative) probability that query is True vs False
-  
 ##############################################################################
 ## Support code
 def read_cpt(model,varName,condVals):
@@ -593,7 +454,7 @@ def main(args):
     s=args.query.split('=')
     args.query=(s[0].strip(),s[1].strip().upper().startswith('T'))
   if args.evidence is None:
-    args.evidence=[]
+    args.evidence={}
   else:
     ev=[]
     for e in args.evidence:

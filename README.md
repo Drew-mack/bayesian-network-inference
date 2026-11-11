@@ -63,7 +63,21 @@ Recursive:   0.18544656224532036
 
 The results agree within floating-point precision.
 
+## Interactive network explorer
+
+Start the local web server from the project directory:
+
+```sh
+python3 explorer.py
+```
+
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000). Use `python3 explorer.py --port 8001` to choose another port. Press Ctrl+C in the terminal to stop the server. Python 3.9 or later is required. The server binds to localhost and uses only the Python standard library; the browser needs an internet connection to load Cytoscape.js and the optional web fonts.
+
+Choose either network, drag the nodes, and select a node to see its parents and conditional probability table. Choose a query and optionally add evidence, then calculate using either exact inference method. The query and evidence are highlighted on the graph. The query variable must be different from all evidence variables.
+
 ## Usage
+
+Run these commands from the project directory with Python 3. The `table` mode additionally requires the `tabulate` package (`python3 -m pip install tabulate`).
 
 Run exact inference using brute-force enumeration:
 
@@ -101,17 +115,14 @@ python3 prob_inf.py --model student_bn.csv --mode table
 
 ## Project Structure
 
-```text
-bayesian-network-inference/
-├── prob_inf.py
-├── student_bn.csv
-├── burglary_alarm.csv
-├── README.md
-├── .gitignore
-└── docs/
-    ├── network_diagram.png
-    └── inference_derivation.pdf
-```
+- `prob_inf.py` implements exact inference, model loading, and the command-line interface.
+- `explorer.py` serves the local visualization and connects it to the inference functions; `web/` contains the browser interface.
+- `burglary_alarm.csv` and `student_bn.csv` contain the example networks.
+- `autochecker.py` checks joint probability, brute-force inference, and properties of the custom network; it does not test recursive inference.
+- `student_bn.pdf` and `student_bn_inference.pdf` contain the network and inference coursework.
+- `hw3submission.zip` is the original submission archive, and `collaboration.txt` records the collaboration statement.
+
+Run the supplied checks with `python3 autochecker.py`. The command-line interface also lists an `approx` mode, but approximate inference is not implemented. Both exact methods enumerate possibilities and become expensive as networks grow; the recursive method also searches permutations of hidden variables to choose a calculation order.
 
 ## Background
 

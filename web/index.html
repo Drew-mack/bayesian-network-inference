@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Bayesian Network Explorer</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.33.1/dist/cytoscape.min.js" defer></script>
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <main class="page">
+    <header class="intro">
+      <p class="eyebrow">AN INTERACTIVE GUIDE TO PROBABILITY</p>
+      <h1>Bayesian Network Explorer<span>.</span></h1>
+      <p class="subtitle">Explore how evidence changes what we believe.</p>
+    </header>
+    <section class="workspace" aria-label="Network explorer">
+      <div class="workspace-header">
+        <div><p class="eyebrow">THE NETWORK</p><h2>Explore the relationships</h2></div>
+        <label class="network-select">Network <select id="model"><option value="burglary">Burglary alarm</option><option value="student">Custom network</option></select></label>
+      </div>
+      <div class="layout">
+        <div class="graph-column">
+          <div class="graph-top"><span><i class="status-dot"></i> INTERACTIVE GRAPH</span><button id="reset-view" class="text-button" type="button">Reset view ↗</button></div>
+          <div id="graph" role="img" aria-label="Interactive Bayesian network graph. Select a variable from the details selector to view its table."></div>
+          <p id="network-key" class="network-key"></p>
+          <div class="graph-footer"><span>Drag nodes to rearrange · Scroll to zoom</span><div class="legend"><span><i class="legend-dot default"></i> Variable</span><span><i class="legend-dot query"></i> Query</span><span><i class="legend-dot evidence"></i> Evidence</span></div></div>
+        </div>
+        <aside class="details" aria-labelledby="details-title">
+          <p class="eyebrow">VARIABLE DETAILS</p>
+          <div class="details-heading"><h3 id="details-title">Select a variable</h3><select id="selected-node" aria-label="Select variable for details"></select></div>
+          <p class="details-description">Select a node to inspect its relationships and conditional probabilities.</p>
+          <div class="divider"></div>
+          <p class="field-title">PARENTS</p><p id="parents" class="parents">—</p>
+          <div class="table-heading"><p class="field-title">PROBABILITY TABLE</p><span id="table-label"></span></div>
+          <div class="table-wrap"><table><thead id="cpt-head"></thead><tbody id="cpt-body"></tbody></table></div>
+          <p class="table-note">Each row shows the probability that this variable is true.</p>
+        </aside>
+      </div>
+      <div class="query-section">
+        <div class="query-heading"><div><p class="eyebrow">TRY IT YOURSELF</p><h2>Ask a probability question</h2></div><p>Choose a query and add any evidence you know.</p></div>
+        <form id="query-form">
+          <div class="query-grid">
+            <label>Query variable<select id="query"></select></label>
+            <label>Query value<select id="query-value"><option value="true">True</option><option value="false">False</option></select></label>
+            <label>Inference method<select id="method"><option value="tree">Recursive tree</option><option value="brute">Brute force</option></select></label>
+          </div>
+          <div class="evidence-heading"><div><span class="label">Evidence</span><span class="optional"> OPTIONAL</span></div><button type="button" id="add-evidence" class="add-button">+ Add evidence</button></div>
+          <div id="evidence-rows"></div>
+          <div class="run-row"><button type="submit" class="run-button">Calculate probability <span>→</span></button><p id="form-message" role="status" aria-live="polite"></p></div>
+        </form>
+        <div id="result" class="result" aria-live="polite" hidden><div><p class="eyebrow">RESULT</p><p id="result-expression"></p></div><div class="result-value"><strong id="result-probability"></strong><span>probability</span></div></div>
+      </div>
+    </section>
+    <footer>Bayesian Network Explorer <span>·</span> Built with Python and Cytoscape.js</footer>
+  </main>
+</body>
+</html>
