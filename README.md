@@ -3,8 +3,7 @@
 This project explores exact probabilistic inference in Bayesian networks. It
 computes joint probabilities and posterior probabilities from Boolean networks
 using brute-force enumeration and recursive tree inference. The project was
-built for CSE 3521: Introduction to Artificial Intelligence at The Ohio State
-University.
+built for CSE 3521: Introduction to Artificial Intelligence.
 
 The interactive explorer displays the networks as directed graphs and lets you
 select a query, add evidence, and see the resulting probability.
