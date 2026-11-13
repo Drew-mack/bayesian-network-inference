@@ -10,7 +10,7 @@ select a query, add evidence, and see the resulting probability.
 
 ## Files
 
-- `prob_inf.py` loads networks and implements the inference algorithms and
+- `prob_inf.py` loads bayesian networks and implements the inference algorithms and
   command-line interface.
 - `explorer.py` runs the local server for the interactive explorer. `web/`
   contains the graph and interface.
