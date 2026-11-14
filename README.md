@@ -14,7 +14,7 @@ select a query, add evidence, and see the resulting probability.
   command-line interface.
 - `explorer.py` runs the local server for the interactive explorer. `web/`
   contains the graph and interface.
-- `burglary_alarm.csv` and `student_bn.csv` contain the burglary alarm network
+- `burglary_alarm.csv` and `student_bn.csv` contains the burglary alarm network
   and an eight-variable custom network.
 - `autochecker.py` checks joint probability, brute-force inference, and
   properties of the custom network. It does not test recursive inference.
